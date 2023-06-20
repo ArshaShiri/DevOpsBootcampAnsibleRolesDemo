@@ -1,0 +1,8 @@
+vpc_cidr_block = "10.0.0.0/16"
+subnet_1_cidr_block = "10.0.10.0/24"
+avail_zone = "eu-west-3b"
+env_prefix = "dev"
+my_ip = "84.85.144.132/32"
+instance_type = "t2.micro"
+ssh_key = "~/.ssh/id_rsa.pub"
+ssh_key_private = "~/.ssh/id_rsa"
