@@ -1,0 +1,62 @@
+---
+- name: Install python3, docker, docker-compose
+  hosts: docker_server
+  # To become the root user to install stuff
+  become: yes
+  # Disable to avoid python3 unavailability issue
+  gather_facts: False
+  tasks:
+    - name: Install python3 and docker
+      vars:
+        # This part uses python2 which is installed by default
+        ansible_python_interpreter: /usr/bin/python
+      ansible.builtin.yum:
+        name:
+          - python3
+          - docker
+        update_cache: yes
+        state: present
+    - name: Install Docker-compose
+      ansible.builtin.get_url:
+        # {{lookup('pipe', 'uname -m')}} means the result of the command `uname -m` is used.
+        url: https://github.com/docker/compose/releases/download/1.27.4/docker-compose-Linux-{{lookup('pipe', 'uname -m')}}
+        dest: /usr/local/bin/docker-compose
+        mode: +x
+    - name: Start docker daemon
+      ansible.builtin.systemd:
+        name: docker
+        state: started
+    - name: Install docker python module
+      ansible.builtin.pip:
+        name: 
+          - docker
+          - docker-compose
+
+- name: Create new linux user
+  hosts: all
+  become: yes
+  tasks: 
+    - name: Create new linux user
+      ansible.builtin.user:
+        name: arsha
+        groups: adm,docker
+
+- name: Start docker containers
+  hosts: docker_server
+  become: yes
+  become_user: arsha
+  vars_files:
+    - project-vars
+  tasks:
+    - name: Copy docker compose
+      ansible.builtin.copy:
+        src: /home/arsha/Repos/DevopsBootcamp/DevOpsBootcampAnsibleDockerDemo/docker-compose.yaml
+        dest: /home/arsha/docker-compose.yaml
+    - name: Docker login
+      community.docker.docker_login:
+        registry_url: https://index.docker.io/v1/
+        username: arshashiri
+        password: "{{docker_password}}"
+    - name: Start container from compose
+      community.docker.docker_compose:
+        project_src: /home/arsha
