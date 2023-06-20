@@ -9,7 +9,6 @@ variable env_prefix {}
 variable instance_type {}
 variable ssh_key {}
 variable my_ip {}
-variable ssh_key_private {}
 
 data "aws_ami" "amazon-linux-image" {
   most_recent = true
@@ -32,6 +31,7 @@ output "ami_id" {
 
 resource "aws_vpc" "myapp-vpc" {
   cidr_block = var.vpc_cidr_block
+  enable_dns_hostnames = true
   tags = {
       Name = "${var.env_prefix}-vpc"
   }
@@ -127,24 +127,18 @@ resource "aws_instance" "myapp-server" {
   tags = {
     Name = "${var.env_prefix}-server"
   }
-
-  # To hand over to ansible from terraform
-  # The inventory option overwrites ansible host file.
-  provisioner "local-exec" {
-    working_dir = "ANSIBLE"
-    command = "ansible-playbook --inventory ${self.public_ip}, --private-key ${var.ssh_key_private} --user ec2-user deploy-docker-ec2user.yaml"
-  }
 }
 
-/* 
-resource "null_resource" "configure_server" {
-  triggers = {
-    trigger = aws_instance.myapp-server.public_ip
-  }
+resource "aws_instance" "myapp-server-two" {
+  ami                         = data.aws_ami.amazon-linux-image.id
+  instance_type               = var.instance_type
+  key_name                    = "myapp-key"
+  associate_public_ip_address = true
+  subnet_id                   = aws_subnet.myapp-subnet-1.id
+  vpc_security_group_ids      = [aws_security_group.myapp-sg.id]
+  availability_zone			      = var.avail_zone
 
-  provisioner "local-exec" {
-    working_dir = "../ansible"
-    command = "ansible-playbook --inventory ${aws_instance.myapp-server.public_ip}, --private-key ${var.ssh_key_private} --user ec2-user deploy-docker-new-user.yaml"
+  tags = {
+    Name = "${var.env_prefix}-server"
   }
 }
-*/
